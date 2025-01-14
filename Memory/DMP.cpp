@@ -3,6 +3,12 @@
 #include <iostream>
 #include <cstddef>
 
+struct Freeblock {
+	size_t size;
+	Freeblock* next;
+};
+
+
 Memorypool::Memorypool(size_t size) {
     pool = ::operator new(size);
     if (!pool) {
@@ -19,21 +25,36 @@ Memorypool::~Memorypool() {
 }
 
 void* Memorypool::allocate(size_t size) {
-    return ::operator new(size);
+    Freeblock* prev = nullptr;
+	Freeblock* current = freeList;
+	
+	while (current != nullptr && current->size < size) {
+		prev = current;
+		current = current->next;
+	}
+	if (current -- nullptr) {
+		return ::operator new(size);
+	}
+	
+	else {
+		if (prev) {
+			prev->next = current->next;
+		}
+		else {
+			freeList = current->next;
+		}
+		return reinterpret_cast<void*>(current);
+	}
+	
+	return ::operator new(size);
 }
 
 void Memorypool::release(void* ptr) {
-    ::operator delete(ptr);
+    F
+	::operator delete(ptr);
 }
 
 int main() {
-    Memorypool pool(1024);
-
-    void* ptr1 = pool.allocate(100);
-    void* ptr2 = pool.allocate(200);
-
-    pool.release(ptr1);
-    pool.release(ptr2);
 
     return 0;
 }
