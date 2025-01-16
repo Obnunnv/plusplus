@@ -1,5 +1,4 @@
-//DOESNT WORK CHATGPT WRITTEN
-//Rendition of cs50x python dna problem set in c++
+//doesnt work
 #include <iostream>
 #include <fstream>
 #include <sstream>
