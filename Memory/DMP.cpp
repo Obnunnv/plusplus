@@ -1,8 +1,11 @@
-#include "memorypool.hpp"
+#include "memorypool.h"
 #include <cstdlib>
 #include <iostream>
 #include <cstddef>
 #include <cstring>
+#include <thread>
+#include <mutex>
+#include <vector>
 
 struct Freeblock {
 	size_t size;
@@ -26,6 +29,8 @@ Memorypool::~Memorypool() {
 }
 
 void* Memorypool::allocate(size_t size) {
+	std::lock_guard<std::mutex> lock(mtx);
+	
     Freeblock* prev = nullptr;
     Freeblock* current = freeList;
 
@@ -58,12 +63,16 @@ size_t Memorypool::getBlocksize(void* ptr) {
 }
 
 void Memorypool::release(void* ptr) {
+	std::lock_guard<std::mutex> lock(mtx);
+	
     Freeblock* block = reinterpret_cast<Freeblock*>(ptr);
 	block->next = freeList;
     freeList = block;
 }
 
 void* Memorypool::reallocate(void* ptr, size_t newSize) {
+	std::lock_guard<std::mutex> lock(mtx);
+	
     if (ptr == nullptr) {
         return allocate(newSize);
 
@@ -79,6 +88,24 @@ void* Memorypool::reallocate(void* ptr, size_t newSize) {
     memcpy(newptr, ptr, CurrentSize);
     release(ptr);
     return newptr;
+}
+
+void MergeAdjacentBlocks() {
+	Freeblock* current = freeList;
+	
+	while (current != nullptr && current->next != nullptr) {
+		char* CurrentEnd = reinterpret_cast<char*>(current) + sizeof(Freeblock) + current->size;
+		char* Nextstart = reinterpret_cast<char*>(current->next);
+		
+		
+		if (CurrentEnd == Nextstart) {
+			current->size += sizeof(Freeblock) + current->next->size;
+			current->next = current->next->size;
+		}
+		else {
+			current = current->next;
+		}
+	}
 }
 
 int main() {
