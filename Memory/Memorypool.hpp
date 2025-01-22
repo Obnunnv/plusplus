@@ -9,7 +9,7 @@ class Memorypool {
 private:
     void* pool;
     size_t poolSize;
-    struct Freeblock* freeList;
+    struct Freeblock* freeList = nullptr;
 	std::mutex mtx;
 
 public:
