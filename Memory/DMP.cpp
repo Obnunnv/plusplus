@@ -1,17 +1,21 @@
-#include "memorypool.h"
+#include "memorypool.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <cstddef>
-#include <cstring>
+#include <string>
 #include <thread>
 #include <mutex>
-#include <vector>
+#include <chrono>
+#include <cstring>
+#include <algorithm>
+#include <cctype>
+
+//./dmp Function Amount (bytes) Time (seconds)
 
 struct Freeblock {
-	size_t size;
-	Freeblock* next;
+    size_t size;
+    Freeblock* next;
 };
-
 
 Memorypool::Memorypool(size_t size) {
     pool = malloc(size);
@@ -25,12 +29,12 @@ Memorypool::Memorypool(size_t size) {
 
 Memorypool::~Memorypool() {
     free(pool);
-    std::cout << poolSize << " bytes destroyed" << std::endl;
+    std::cout << poolSize << " bytes freed" << std::endl;
 }
 
 void* Memorypool::allocate(size_t size) {
-	std::lock_guard<std::mutex> lock(mtx);
-	
+    std::lock_guard<std::mutex> lock(mtx);
+
     Freeblock* prev = nullptr;
     Freeblock* current = freeList;
 
@@ -63,52 +67,97 @@ size_t Memorypool::getBlocksize(void* ptr) {
 }
 
 void Memorypool::release(void* ptr) {
-	std::lock_guard<std::mutex> lock(mtx);
-	
+    std::lock_guard<std::mutex> lock(mtx);
+
     Freeblock* block = reinterpret_cast<Freeblock*>(ptr);
-	block->next = freeList;
+    block->next = freeList;
     freeList = block;
 }
 
 void* Memorypool::reallocate(void* ptr, size_t newSize) {
-	std::lock_guard<std::mutex> lock(mtx);
-	
+    std::lock_guard<std::mutex> lock(mtx);
+
     if (ptr == nullptr) {
         return allocate(newSize);
-
     }
-    size_t CurrentSize = getBlocksize(ptr);
 
-    if (newSize <= CurrentSize) {
+    size_t currentSize = getBlocksize(ptr);
+
+    if (newSize <= currentSize) {
         return ptr;
     }
 
-    
-    void* newptr = allocate(newSize);
-    memcpy(newptr, ptr, CurrentSize);
+    void* newPtr = allocate(newSize);
+    std::memmove(newPtr, ptr, currentSize);
+
     release(ptr);
-    return newptr;
+
+    return newPtr;
 }
 
-void MergeAdjacentBlocks() {
-	Freeblock* current = freeList;
-	
-	while (current != nullptr && current->next != nullptr) {
-		char* CurrentEnd = reinterpret_cast<char*>(current) + sizeof(Freeblock) + current->size;
-		char* Nextstart = reinterpret_cast<char*>(current->next);
-		
-		
-		if (CurrentEnd == Nextstart) {
-			current->size += sizeof(Freeblock) + current->next->size;
-			current->next = current->next->size;
-		}
-		else {
-			current = current->next;
-		}
-	}
+void Memorypool::MergeAdjacentBlocks() {
+    Freeblock* current = freeList;
+
+    while (current != nullptr && current->next != nullptr) {
+        char* currentEnd = reinterpret_cast<char*>(current) + sizeof(Freeblock) + current->size;
+        char* nextStart = reinterpret_cast<char*>(current->next);
+
+        if (currentEnd == nextStart) {
+            current->size += sizeof(Freeblock) + current->next->size;
+            current->next = current->next->next;
+        } else {
+            current = current->next;
+        }
+    }
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc < 4) {
+        std::cerr << "Missing Command Line arguments" << "\n";
+        std::cerr << "./dmp function size (bytes) time (seconds)" << "\n";
+        return 1;
+    }
+
+    Memorypool pool(1024 * 1024);
+
+    std::string function = argv[1];
+    std::transform(function.begin(), function.end(), function.begin(), ::toupper);
+    int msize = std::stoi(argv[2]);
+    int time = std::stoi(argv[3]);
+
+    auto start = std::chrono::steady_clock::now();
+    auto end = start + std::chrono::seconds(time);
+
+    void* ptr = nullptr;
+
+    if (function == "ALLOCATE") {
+        ptr = pool.allocate(msize);
+        std::cout << "Allocated " << msize << " bytes" << "\n";
+    }
+    else if (function == "REALLOCATE") {
+        ptr = pool.allocate(msize);
+        std::cout << "Allocated " << msize << " bytes" << "\n";
+
+
+        while (std::chrono::steady_clock::now() < end) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+
+        ptr = pool.reallocate(ptr, msize);  // Reallocate with new size (doubling the size as an example)
+        std::cout << "Reallocated to " << msize << " bytes" << "\n";
+    }
+
+
+    while (std::chrono::steady_clock::now() < end) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+
+    if (ptr != nullptr) {
+        pool.release(ptr);
+        std::cerr << "Time up Memory freed" << std::endl;
+    }
 
     return 0;
 }
