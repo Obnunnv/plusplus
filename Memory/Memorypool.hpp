@@ -1,9 +1,9 @@
-#include <cstddef>
+#include <cstddef> //For size_t
 #include <cstdlib>
 #include <thread>
-#include <mutex>
+#include <mutex> //For std::mutex mtx
 
-#pragma once
+#pragma once //Pre proccesor Directive ensuring this file in only included once in the main file
 
 class Memorypool {
 private:
