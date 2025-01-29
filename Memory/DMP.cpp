@@ -1,14 +1,14 @@
 #include "memorypool.hpp"
-#include <cstdlib>
-#include <iostream>
-#include <cstddef>
-#include <string>
-#include <thread>
-#include <mutex>
-#include <chrono>
-#include <cstring>
-#include <algorithm>
-#include <cctype>
+#include <cstdlib> //For Malloc and Free
+#include <iostream> //For std::cout and std::cerr
+#include <cstddef> //For size_t
+#include <string> //For std::string and std::transform()
+#include <thread> //For std::this_thread::sleep_for()
+#include <mutex> //For std::lock_guard<std::mutex> lock(mtx)
+#include <chrono> //For std::chrono::steady_clock::now(), std::chrono::seconds(), and std::chrono::milliseconds()
+#include <cstring> //For std::memmove
+#include <algorithm> //For std::transform
+#include <cctype> //For ::toupper()
 
 //./dmp Function Amount (bytes) Time (seconds)
 
@@ -30,6 +30,8 @@ Memorypool::Memorypool(size_t size) {
 Memorypool::~Memorypool() {
     free(pool);
     std::cout << poolSize << " bytes freed" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "\033[2J";
 }
 
 void* Memorypool::allocate(size_t size) {
@@ -158,6 +160,7 @@ int main(int argc, char** argv) {
         pool.release(ptr);
         std::cerr << "Time up Memory freed" << std::endl;
     }
+
 
     return 0;
 }
