@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
         }
 
 
-        ptr = pool.reallocate(ptr, msize);  // Reallocate with new size (doubling the size as an example)
+        ptr = pool.reallocate(ptr, msize);  // Reallocate with new size 
         std::cout << "Reallocated to " << msize << " bytes" << "\n";
     }
 
