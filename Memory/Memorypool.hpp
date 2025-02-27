@@ -20,5 +20,5 @@ public:
     void release(void* ptr);
     void* reallocate(void* ptr, size_t newSize);
     size_t getBlocksize(void* ptr);
-	void MergeAdjacentBlocks();
+    void MergeAdjacentBlocks();
 };
