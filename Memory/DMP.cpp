@@ -13,49 +13,49 @@
 //./dmp Function Amount (bytes) Time (seconds)
 
 struct Freeblock {
-    size_t size;
-    Freeblock* next;
+    size_t size; //Unsigned integer size member of struct Freeblock
+    Freeblock* next; //Pointer to another freeblock creating a linked list of freeblock structures 
 };
 
-Memorypool::Memorypool(size_t size) {
-    pool = malloc(size);
-    if (!pool) {
-        throw std::bad_alloc();
+Memorypool::Memorypool(size_t size) { //Constructor for Memorypool with parameter size
+    pool = malloc(size); //Allocates size memory to pool
+    if (!pool) { 
+        throw std::bad_alloc(); //If the allocation fails std::bad_alloc error is thrown
     }
-    freeList = nullptr;
-    poolSize = size;
-    std::cout << poolSize << " bytes created" << std::endl;
+    freeList = nullptr; //Sets no more freeblocks in the linked list after this by setting freeList to nullptr
+    poolSize = size; //Sets poolSize to size for the next line
+    std::cout << poolSize << " bytes created" << std::endl; //Prints amount of memory created
 }
 
-Memorypool::~Memorypool() {
-    free(pool);
-    std::cout << poolSize << " bytes freed" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::cout << "\033[2J";
+Memorypool::~Memorypool() { //Destructor for Memorypool
+    free(pool); //Fress the memory from pool
+    std::cout << poolSize << " bytes freed" << std::endl; //Prints the amount of memory freed
+    std::this_thread::sleep_for(std::chrono::seconds(1)); //Sleeps program for 1 seconds
+    std::cout << "\033[2J"; //Clears screen
 }
 
-void* Memorypool::allocate(size_t size) {
-    std::lock_guard<std::mutex> lock(mtx);
+void* Memorypool::allocate(size_t size) { //Allocate function from class memorypool with parameter size
+    std::lock_guard<std::mutex> lock(mtx); //Uses mutex to lock resources of this thread
 
-    Freeblock* prev = nullptr;
-    Freeblock* current = freeList;
+    Freeblock* prev = nullptr; //Move the current node on the linked list up and sets the previous one to nullptr
+    Freeblock* current = freeList; //Sets current node on linkedlist to current allocated memory
 
-    while (current != nullptr && current->size < size) {
-        prev = current;
-        current = current->next;
+    while (current != nullptr && current->size < size) { //While the current block is not null and the size of the current block isint smaller then the size supposed to be allocated
+        prev = current; //Sets the previous block to current
+        current = current->next; //Moves the current block to the next
     }
 
-    if (current != nullptr) {
-        if (prev) {
-            prev->next = current->next;
+    if (current != nullptr) { //If the current block isint null
+        if (prev) { //If previous block exists
+            prev->next = current->next; //Moves the node on the linked list up?
         } else {
-            freeList = current->next;
+            freeList = current->next; //Moves the current block up
         }
 
-        return reinterpret_cast<char*>(current) + sizeof(Freeblock);
+        return reinterpret_cast<char*>(current) + sizeof(Freeblock); //Pointer magic (arithmetic) to return usable memory
     }
 
-    void* rawBlock = malloc(size + sizeof(size_t));
+    void* rawBlock = malloc(size + sizeof(size_t)); 
     if (rawBlock) {
         *((size_t*)rawBlock) = size;
         return (char*)rawBlock + sizeof(size_t);
